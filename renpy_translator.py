@@ -1,161 +1,115 @@
 # -*- coding: utf-8 -*-
-'''
-Скрипт для автоматического... ну ладно, полуавтоматического перевода renpy игр
-через гуглтранслейт. :)
-Работает под Windows на python 3.4, на других версиях и ОС не проверял.
-Для работы требуется textblob (textblob.readthedocs.org).
-
-Использование:
-
-Для начала нужно получить файлы для перевода.
-В окне renpy жмем на "Создать переводы". Вводим имя папки на латинице, например rus.
-Движок создаст папку tl с нужными файлами в папке game.
-
-Добавляем в главное меню выбор языка игры.
-Для этого в файл screens.rpy вставляем эти строки.
-
-            frame:
-                style_group "pref"
-                has vbox
-
-                label _("Language")
-                textbutton "English" action Language(None)
-                textbutton "Russian" action Language("rus")
-
-Если на предыдущем шаге папку для переводов вы назвали не rus,
-а как-то po_drugomu, то измените Language("rus") на Language("po_drugomu")
-Для примера можно посмотреть файл screens.rpy из обучающей игры, если сомневаетесь
-куда именно вставить этот код.
-
-Создаем временную папку, например D:\tmp (русских букв в пути быть не должно)
-Копируем туда скрипт renpy_translator.py и папку tl.
-Запускаем командную строку, переходим во временную папку и запускаем скрипт.
-python3 renpy_translator.py
-
-Скрипт создаст две папки transl и orig_copy
-В папке transl будут лежать переведенные файлы,
-а в orig_copy файлы с копией оригинального текста, просто в пустые кавычки
-вставляется оригинальный текст.
-Эти файлы могут пригодиться, если часть файлов нужно оставить без перевода.
-
-Копируем файлы из папки transl в папку game/tl
-Запускаем проект.
-Смотрим на лист ошибок :) Скорее всего они будут, особенно, если игра большая.
-Гуглтранслейт иногда переносит точку за кавычки ".
-Или добавляет пробелы в экранированные \ " кавычки \ ""
-Всё предусмотреть у меня не получилось, и такие ошибки надо исправлять руками.
-
-Да, игра должна быть разархивирована. Если игра в архиве, то инструкции по распаковке
-можно найти тут https://github.com/Shizmob/rpatool
-Если шрифт, указанный в игре не содержит кирилицу, и вместо русского текста у вас квадраты
-то в файле options.rpy замените шрифты на кирилические. Например constan.ttf
-
-Поддерживается перевод на любые языки, которые поддерживает гуглтранслейт. Для этого в коде
-скрипта надо заменить (to='ru') на нужную пару языков. Инструкции тут:
-https://textblob.readthedocs.org/en/dev/quickstart.html#translation-and-language-detection
-'''
+import re
+import os
+import time
+import random
+# from googletrans import Translator     # googletrans
+from textblob import TextBlob            # TextBlob
 
 
-import re, os
-from textblob import TextBlob
+# translator = Translator()
 
+files_to_translate = []  # все файлы для перевода
 
+# создаем дирректорию для файлов с переводом (если нужно)
 os.mkdir('transl')
-os.mkdir('orig_copy')
-all_files = []
-for top, dirs, files in os.walk('.'):
+
+# Находим файлы для перевода в дирректории
+all_files = []  # все файлы
+for top, dirs, files in os.walk('./tl/rus/'):
     for nm in files:
         all_files.append(os.path.join(top, nm))
-to_translate = list(filter(lambda x: x.endswith('.rpy'), all_files)) 
-print(to_translate)
-print(all_files)
+files_to_translate = list(filter(lambda x: x.endswith('.rpy'), all_files))
+#########################################################################
 
 
-def foo(file):
-    def read_all():
-        with open(file) as f:
-            all_file = f.read()
-            all = all_file.split('\n')
-        return all
-    old_rpy = read_all()
+def read_all(file):  # Возвращает имя текущего файла и его текст
+    with open(file) as f:
+        file_name = str(re.findall(r'[\w-]*?.rpy', file))
+        all_file = f.read()
+        current_file_text = all_file.split('\n')
+        print(file_name)
+    return current_file_text, file_name
 
-    file_name = str(re.findall(r'[\w ]*?.rpy', file))
 
-    # Подставляет оригинальный текст в пустые кавычки "" и сохраняет в файлы
-    # Может быть полезно для неполного перевода.
-    #
+def translate(line):  # возвращает перевод текущей строки
+    r = random.randrange(1, 4, 1)                  # Рандомная пауза между запросами на перевод (от 1 до 4 секунд)
+    time.sleep(r)
+    en_blob = TextBlob(str(line))                  # TextBlob
+    per = str(en_blob.translate(to='ru'))          # TextBlob
+    # per = translator.translate(line, dest='ru')  # googletrans
+    # print(per.text)                              # googletrans
+    print(per)                                     # TextBlob
+
+    print('working... {}'.format(currentFilename))
+
+    # return str(per.text)                         # googletrans
+    per = str(per)
+    per = per.replace(r'\ "', r' \"')
+    per = per.replace(r' \"', r'\"')
+    return per
+
+
+r1 = re.compile(r'"{i}(.*[^\\"]){/i}"$'), 4, -5  # курсив
+r2 = re.compile(r'"{b}(.*[^\\"]){/b}"$'), 4, -5  # курсив
+
+r_last = re.compile(r'"(.*)"$'), 1, -1  # просто кавычки
+# print(reg1)
+# exit()
+
+
+def search_line_for_translate(all_file_text):  # Ищем строку для перевода
     count = -1
-    for i in old_rpy:
+    tmp_text = all_file_text
+    length_text = len(all_file_text)
+    for line in all_file_text:
         count += 1
-        if '    new ""' in old_rpy[count]:
-            old_rpy[count] = '    new' + old_rpy[count - 1][7:]
-        elif '    ""' in old_rpy[count]:
-            old_rpy[count] = '    ' + old_rpy[count - 1][6:]
-        elif re.findall(r'    [\w]+? ""', old_rpy[count]):
-            old_rpy[count] = '    ' + old_rpy[count - 1][6:]
-    
-    new_rpy =  open('orig_copy\\' + file_name[2:-6] + '.rpy', 'w')
-    for i in old_rpy:
-        new_rpy.write(i + '\n')
-    new_rpy.close()
-
-
-# Перевод текста
-    count2 = -1
-    for i in old_rpy:
-        count2 += 1
-        if re.findall(r'    old "[\w,\'.!\?_ \\\":-]*?"', i):
-            en_blob = TextBlob(str(i[9:-1]))
+        if re.search(r1[0], line):
+            result = re.search(r1[0], line)
+            orig_line = str(result.group(0))[r1[1]:r1[2]]
+            print(orig_line)
             try:
-                old_rpy[count2 + 1] = '    new "' + str(en_blob.translate(to='ru'))+'"'
-                old_rpy[count2 + 1] = old_rpy[count2+1].replace('\\ "', '\\"')
-                print(old_rpy[count2 + 1])
+                zzz = str(tmp_text[count+1]).replace(str(orig_line), translate(orig_line))
+                tmp_text[count+1] = zzz
             except:
                 pass
 
-        if re.findall(r'# extend', i):
-            pass
-
-        elif re.findall(r'    # "[\w,\'.!\?_ \\\":-]*?"', i):
-            en_blob = TextBlob(str(i[7:-1]))
+        elif re.search(r2[0], line):
+            result = re.search(r2[0], line)
+            orig_line = str(result.group(0))[r2[1]:r2[2]]
+            print(orig_line)
             try:
-                old_rpy[count2 + 1] = '    "' + str(en_blob.translate(to='ru')) + '"'
-                print(old_rpy[count2 + 1])
+                zzz = str(tmp_text[count+1]).replace(str(orig_line), translate(orig_line))
+                tmp_text[count+1] = zzz
             except:
                 pass
 
-        elif re.findall(r'    #[\w_ ]*?"[\w,\'.!\?_ \\\":-]*?"', i):
-            en_blob = TextBlob(str(i[5:]))
+        elif re.search(r_last[0], line):
+            print('{} percents'.format(round(count / (int(length_text)), 4) * 100))
+            result = re.search(r_last[0], line)
+            orig_line = str(result.group(0))[r_last[1]:r_last[2]]
+            print(orig_line)
             try:
-                old_rpy[count2 + 1] = '    ' + str(en_blob.translate(to='ru'))
-                old_rpy[count2 + 1] = old_rpy[count2 + 1].replace('\\ "', '\\"')
-                print(old_rpy[count2 + 1])
+                zzz = str(tmp_text[count + 1]).replace(str(orig_line), translate(orig_line))
+                tmp_text[count + 1] = zzz
             except:
                 pass
 
-        elif re.findall(r'    # "[\w,\'.!\?_ \\\":-]*?\[', i):
-            en_blob = TextBlob(str(i[7:-1]))
-            try:
-                old_rpy[count2 + 1] = '    "' + str(en_blob.translate(to='ru')) + '"'
-                print(old_rpy[count2 + 1])
-            except:
-                pass
-
-        elif re.findall(r'    #[\w ]*?"[\w,\'.!\? \\\":-]*?\[', i):
-            en_blob = TextBlob(str(i[6:]))
-            try:
-                old_rpy[count2 + 1] = '    ' + str(en_blob.translate(to='ru'))
-                print(old_rpy[count2 + 1])
-            except:
-                pass
-
-    new_rpy_tr = open('transl\\' + file_name[2:-6] + '.rpy', 'w', encoding= 'utf-8')
-    for i in old_rpy:
+    # Запись в файл
+    print('пишем в файл')
+    # str(tmp_text[0]).replace('п»ї', '')
+    new_rpy_tr = open('transl\\{}'.format(str(currentFilename)), 'w', encoding='utf-8')
+    for i in tmp_text:
         new_rpy_tr.write(str(i) + '\n')
     new_rpy_tr.close()
 
 
-for i in to_translate:
+for i in files_to_translate:
+    currentTextFromFile = read_all(i)[0]
+    currentFilename = (read_all(i)[1])[2:-2]
+    search_line_for_translate(currentTextFromFile)
     print('working... {}'.format(i))
-    foo(i)
+
+
+
 
