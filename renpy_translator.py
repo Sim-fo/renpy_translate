@@ -47,7 +47,7 @@ def correct(some_string):
 
 
 def translate_blob(line):  # возвращает перевод текущей строки
-    r = random.randrange(0, 2, 1)                  # Рандомная пауза между запросами на перевод (от 1 до 3 секунд)
+    r = random.randrange(0, 2, 1)                  # Рандомная пауза между запросами на перевод (от 1 до 2 секунд)
     time.sleep(r)
     en_blob = TextBlob(str(line))                  # TextBlob
     per = str(en_blob.translate(to='ru'))          # TextBlob
@@ -58,7 +58,7 @@ def translate_blob(line):  # возвращает перевод текущей 
 
 
 def translate_googletrans(line):  # возвращает перевод текущей строки
-    r = random.randrange(0, 4, 1)  # Рандомная пауза между запросами на перевод (от 1 до 3 секунд)
+    r = random.randrange(0, 4, 1)  # Рандомная пауза между запросами на перевод (от 1 до 4 секунд)
     time.sleep(r)
     per = translator.translate(line, dest='ru')  # googletrans
     print('======= working... {}'.format(currentFilename))
@@ -86,7 +86,7 @@ def search_line_for_translate(all_file_text):  # Ищем строку для п
             orig_line = str(result.group(0))[r1[1]:r1[2]]
             print(orig_line)
             try:
-                zzz = str(tmp_text[count+1]).replace(str(orig_line), select_translator(orig_line))  #translate_blob можно заменить на функцию translate_googletrans
+                zzz = str(tmp_text[count+1]).replace(str(orig_line), select_translator(orig_line))
                 tmp_text[count+1] = zzz
             except:
                 pass
@@ -96,7 +96,7 @@ def search_line_for_translate(all_file_text):  # Ищем строку для п
             orig_line = str(result.group(0))[r2[1]:r2[2]]
             print(orig_line)
             try:
-                zzz = str(tmp_text[count+1]).replace(str(orig_line), select_translator(orig_line))  #translate_blob можно заменить на функцию translate_googletrans
+                zzz = str(tmp_text[count+1]).replace(str(orig_line), select_translator(orig_line))
                 tmp_text[count+1] = zzz
             except:
                 pass
@@ -107,7 +107,7 @@ def search_line_for_translate(all_file_text):  # Ищем строку для п
             orig_line = str(result.group(0))[r_last[1]:r_last[2]]
             print(orig_line)
             try:
-                zzz = str(tmp_text[count + 1]).replace(str(orig_line), select_translator(orig_line))  #translate_blob можно заменить на функцию translate_googletrans
+                zzz = str(tmp_text[count + 1]).replace(str(orig_line), select_translator(orig_line))
                 tmp_text[count + 1] = zzz
             except:
                 pass
