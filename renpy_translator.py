@@ -3,16 +3,17 @@ import re
 import os
 import time
 import random
-# from googletrans import Translator     # googletrans
+
+import translator as translator
+from googletrans import Translator     # googletrans
 from textblob import TextBlob            # TextBlob
 
-
-# translator = Translator()
+translator = Translator()
 
 files_to_translate = []  # все файлы для перевода
 
 # создаем дирректорию для файлов с переводом (если нужно)
-os.mkdir('transl')
+# os.mkdir('transl')
 
 # Находим файлы для перевода в дирректории
 all_files = []  # все файлы
@@ -24,30 +25,45 @@ files_to_translate = list(filter(lambda x: x.endswith('.rpy'), all_files))
 
 
 def read_all(file):  # Возвращает имя текущего файла и его текст
-    with open(file) as f:
+    with open(file, encoding='utf-8') as f:
         file_name = str(re.findall(r'[\w-]*?.rpy', file))
+        # print(file_name)
         all_file = f.read()
         current_file_text = all_file.split('\n')
-        print(file_name)
     return current_file_text, file_name
 
 
-def translate(line):  # возвращает перевод текущей строки
-    r = random.randrange(1, 4, 1)                  # Рандомная пауза между запросами на перевод (от 1 до 4 секунд)
+def select_translator(line):    # Выбор сервиса для перевода
+    return translate_blob(line)
+    # return translate_googletrans(line)
+
+
+def correct(some_string):
+    fix = some_string
+    fix = fix.replace(r'\ "', r' \"')
+    fix = fix.replace(r' \"', r'\"')
+    # fix = fix.replace(' ', ' ')
+    return fix
+
+
+def translate_blob(line):  # возвращает перевод текущей строки
+    r = random.randrange(0, 2, 1)                  # Рандомная пауза между запросами на перевод (от 1 до 3 секунд)
     time.sleep(r)
     en_blob = TextBlob(str(line))                  # TextBlob
     per = str(en_blob.translate(to='ru'))          # TextBlob
-    # per = translator.translate(line, dest='ru')  # googletrans
-    # print(per.text)                              # googletrans
-    print(per)                                     # TextBlob
-
-    print('working... {}'.format(currentFilename))
-
-    # return str(per.text)                         # googletrans
+    # print(per)                                   # TextBlob
+    print('======= working... {}'.format(currentFilename))
     per = str(per)
-    per = per.replace(r'\ "', r' \"')
-    per = per.replace(r' \"', r'\"')
-    return per
+    return correct(per)
+
+
+def translate_googletrans(line):  # возвращает перевод текущей строки
+    r = random.randrange(0, 4, 1)  # Рандомная пауза между запросами на перевод (от 1 до 3 секунд)
+    time.sleep(r)
+    per = translator.translate(line, dest='ru')  # googletrans
+    print('======= working... {}'.format(currentFilename))
+    per = str(per.text)
+    return correct(per)
 
 
 r1 = re.compile(r'"{i}(.*[^\\"]){/i}"$'), 4, -5  # курсив
@@ -63,13 +79,14 @@ def search_line_for_translate(all_file_text):  # Ищем строку для п
     tmp_text = all_file_text
     length_text = len(all_file_text)
     for line in all_file_text:
+        # print("+++++++ " + line)
         count += 1
         if re.search(r1[0], line):
             result = re.search(r1[0], line)
             orig_line = str(result.group(0))[r1[1]:r1[2]]
             print(orig_line)
             try:
-                zzz = str(tmp_text[count+1]).replace(str(orig_line), translate(orig_line))
+                zzz = str(tmp_text[count+1]).replace(str(orig_line), select_translator(orig_line))  #translate_blob можно заменить на функцию translate_googletrans
                 tmp_text[count+1] = zzz
             except:
                 pass
@@ -79,7 +96,7 @@ def search_line_for_translate(all_file_text):  # Ищем строку для п
             orig_line = str(result.group(0))[r2[1]:r2[2]]
             print(orig_line)
             try:
-                zzz = str(tmp_text[count+1]).replace(str(orig_line), translate(orig_line))
+                zzz = str(tmp_text[count+1]).replace(str(orig_line), select_translator(orig_line))  #translate_blob можно заменить на функцию translate_googletrans
                 tmp_text[count+1] = zzz
             except:
                 pass
@@ -90,7 +107,7 @@ def search_line_for_translate(all_file_text):  # Ищем строку для п
             orig_line = str(result.group(0))[r_last[1]:r_last[2]]
             print(orig_line)
             try:
-                zzz = str(tmp_text[count + 1]).replace(str(orig_line), translate(orig_line))
+                zzz = str(tmp_text[count + 1]).replace(str(orig_line), select_translator(orig_line))  #translate_blob можно заменить на функцию translate_googletrans
                 tmp_text[count + 1] = zzz
             except:
                 pass
@@ -108,7 +125,7 @@ for i in files_to_translate:
     currentTextFromFile = read_all(i)[0]
     currentFilename = (read_all(i)[1])[2:-2]
     search_line_for_translate(currentTextFromFile)
-    print('working... {}'.format(i))
+    # print('working... {}'.format(i))
 
 
 
